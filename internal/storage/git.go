@@ -15,6 +15,12 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
+func init() {
+	transport.UnsupportedCapabilities = []capability.Capability{
+		capability.ThinPack,
+	}
+}
+
 type GitClient struct {
 	CurrentSource *types.GitSource
 }
@@ -68,12 +74,6 @@ func (gc *GitClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (bill
 		Auth:         gitAuth,
 		Depth:        1,
 		SingleBranch: true,
-	}
-
-	if strings.Contains(gc.CurrentSource.URL, "azure") {
-		transport.UnsupportedCapabilities = []capability.Capability{
-			capability.ThinPack,
-		}
 	}
 
 	stg := memory.NewStorage()

@@ -35,83 +35,41 @@ func (m *mockSourceClient) SetCurrentSource(s *types.Source) {
 
 func TestCloneSources(t *testing.T) {
 	// Arrange
-	tests := []struct {
-		name           string
-		targetSources  map[string]types.Source
-		sourceClients  map[string]services.SourceClient
-		expectedErrors []error
-	}{
-		{
-			name: "successful clone",
-			targetSources: map[string]types.Source{
-				"source1": {
-					Alias:      "source1",
-					SourceType: types.GitSourceType,
-				},
-			},
-			sourceClients: map[string]services.SourceClient{
-				string(types.GitSourceType): func() services.SourceClient {
-					client := new(mockSourceClient)
-					client.On("SetCurrentSource", mock.Anything).Return()
-					client.On("CloneSource", mock.Anything, mock.Anything).Return(memfs.New(), nil)
-					return client
-				}(),
-			},
-			expectedErrors: nil,
+	ctx := context.Background()
+	memFs := afero.NewMemMapFs()
+	logger := slog.New(slog.DiscardHandler)
+
+	mockSourceClient := new(mockSourceClient)
+	mockSource := types.Source{
+		Alias: "test-source",
+	}
+	mockSourceClient.On("CloneSource", mock.Anything, mock.Anything).Return(memfs.New(), nil)
+
+	sourceService := &services.SourceService{
+		SourcesCommandConfig: &services.SourcesCommandConfig{
+			OutputPath: "/output",
 		},
-		// {
-		// 	name: "clone failure",
-		// 	targetSources: map[string]types.Source{
-		// 		"source1": {
-		// 			Alias:      "source1",
-		// 			SourceType: types.GitSourceType,
-		// 		},
-		// 	},
-		// 	sourceClients: map[string]services.SourceClient{
-		// 		string(types.GitSourceType): func() services.SourceClient {
-		// 			client := new(mockSourceClient)
-		// 			client.On("SetCurrentSource", mock.Anything).Return()
-		// 			client.On("CloneSource", mock.Anything, mock.Anything).
-		// 				Return(memfs.New(), errors.New("clone error"))
-		// 			return client
-		// 		}(),
-		// 	},
-		// 	expectedErrors: []error{
-		// 		&package_errors.SourceError{
-		// 			Message: "inmem clone failed for {Alias:source1 SourceType:GitSourceType SourceAuthAlias: SourceAuth:<nil>}",
-		// 			Err:     errors.New("clone error"),
-		// 		},
-		// 	},
-		// },
+		Logger:        logger,
+		TargetSources: map[string]types.Source{"test-source": mockSource},
+		SourceClients: map[string]services.SourceClient{"test-source": mockSourceClient},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			memFs := afero.NewMemMapFs()
-			ss := &services.SourceService{
-				Logger:        slog.New(slog.DiscardHandler),
-				TargetSources: tt.targetSources,
-				SourceClients: tt.sourceClients,
-				SourcesCommandConfig: &services.SourcesCommandConfig{
-					OutputPath: "/output",
-				},
-			}
+	// Act
+	billyChan, errChan := sourceService.CloneSources(ctx, memFs)
 
-			// Act
-			resultFs, errs := ss.CloneSources(context.Background(), memFs)
-
-			// Assert
-			if tt.expectedErrors == nil {
-				assert.NotNil(t, resultFs)
-				assert.Empty(t, errs)
-			} else {
-				assert.Nil(t, resultFs)
-				assert.Len(t, errs, len(tt.expectedErrors))
-				for i, expectedErr := range tt.expectedErrors {
-					assert.EqualError(t, errs[i], expectedErr.Error())
-				}
-			}
-		})
+	// Assert
+	var billyFs billy.Filesystem
+	var err error
+	select {
+	case billyFs = <-billyChan:
+		assert.NotNil(t, billyFs, "Expected a non-nil billy.Filesystem")
+	case err = <-errChan:
+		assert.Fail(t, "Unexpected error received", err)
 	}
+
+	// Ensure channels are closed
+	_, billyChanOpen := <-billyChan
+	_, errChanOpen := <-errChan
+	assert.False(t, billyChanOpen, "Expected billyChan to be closed")
+	assert.False(t, errChanOpen, "Expected errChan to be closed")
 }

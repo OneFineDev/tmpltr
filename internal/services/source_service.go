@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"sync"
 
 	package_errors "github.com/OneFineDev/tmpltr/internal/errors"
 	"github.com/OneFineDev/tmpltr/internal/storage"
@@ -17,6 +18,7 @@ import (
 const (
 	logMsgGitClone = "git_clone"
 	logKeyGitRepo  = "repo"
+	logKeyErr      = "error"
 )
 
 // SourcesCommandConfig represents the relevant configuration settings for any command leveraging types.
@@ -110,43 +112,73 @@ func (ss *SourceService) BuildProjectSourceConfigs() error {
 	return nil
 }
 
-func (ss *SourceService) CloneSources(ctx context.Context, targetFs afero.Fs) (afero.Fs, []error) {
-	errs := []error{}
+func (ss *SourceService) CloneSources(ctx context.Context, targetFs afero.Fs) (chan billy.Filesystem, chan error) {
+	// errs := []error{}
+	// var mu sync.Mutex // Add mutex to protect the errs slice
 
 	sfs := storage.SafeFs{
 		Fs: targetFs,
 	}
 
+	billyChan := make(chan billy.Filesystem)
+	errChan := make(chan error)
+
+	var wg sync.WaitGroup
+
 	for _, v := range ss.TargetSources {
-		ss.SourceClients[string(v.SourceType)].SetCurrentSource(&v)
+		wg.Add(1)
+		go func(source types.Source) {
+			defer wg.Done()
 
-		ss.Logger.Info(
-			logMsgGitClone, logKeyGitRepo, v.Alias,
-		)
+			gc := storage.NewGitClient()
+			gc.CurrentSource = (*types.GitSource)(&source)
 
-		cloneOpts := storage.CloneOpts{
-			DestinationFs:   sfs.Fs,
-			DestinationPath: ss.OutputPath,
-		}
+			ss.Logger.Info(
+				logMsgGitClone, logKeyGitRepo, source.Alias,
+			)
 
-		bfs, err := ss.SourceClients[string(v.SourceType)].CloneSource(ctx, cloneOpts)
-		if err != nil {
-			e := &package_errors.SourceError{
-				Message: fmt.Sprintf("inmem clone failed for %v", v),
-				Err:     err,
+			cloneOpts := storage.CloneOpts{
+				DestinationFs:   sfs.Fs,
+				DestinationPath: ss.OutputPath,
 			}
-			errs = append(errs, e)
 
-			ss.Logger.Error(logMsgGitClone, logKeyGitRepo, e.Error())
-		} else {
-			sfs.CopyFileSystemSafe(bfs, "/", ss.OutputPath)
-		}
+			bfs, err := gc.CloneSource(ctx, cloneOpts)
+			if err != nil {
+				e := &package_errors.SourceError{
+					Message: fmt.Sprintf("inmem clone failed for %v", source.Alias),
+					Err:     err,
+				}
+				ss.Logger.Error(logMsgGitClone, logKeyGitRepo, source.Alias, logKeyErr, e.Err.Error())
+				errChan <- e
+				return
+			}
+
+			billyChan <- bfs
+		}(v)
 	}
 
-	if len(errs) > 0 {
-		return nil, errs
-	}
-	return sfs.Fs, nil
+	go func() {
+		wg.Wait()
+		close(billyChan)
+		close(errChan)
+	}()
+
+	return billyChan, errChan
+
+	// for {
+	// 	select {
+	// 	case r, more := <-billyChan:
+	// 		if !more {
+	// 			return errs
+	// 		}
+	// 		sfs.CopyFileSystemSafe(r, "/", ss.OutputPath)
+
+	// 	case e := <-errChan:
+	// 		mu.Lock()
+	// 		errs = append(errs, e)
+	// 		mu.Unlock()
+	// 	}
+	// }
 }
 
 func (s *SourceService) parseSourceSets() {
