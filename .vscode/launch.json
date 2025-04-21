@@ -1,0 +1,21 @@
+{
+    // Configurations for debugging Cobra commands.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Cobra Command - Get Values",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}", // Adjust the path to your Cobra command directory.
+            "args": [
+                "get",
+                "values",
+                "--config=/home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/.tmpltr",
+            ],
+            "env": {
+                "TMPLTR_FLAGDEBUG": "true"
+            },
+        }
+    ]
+}

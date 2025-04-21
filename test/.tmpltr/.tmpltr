@@ -1,0 +1,13 @@
+logging:
+  level: ERROR
+  format: text
+  outputs: [stdout]
+verbose: false
+sourceConfigFile: /home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/.tmpltr/.sources.yaml
+
+auth:
+  ssh:
+# sources:
+#   valuesFrom: cli # cli OR sourceFile
+#   useLocal: true # Creates a local copy of sources
+#   skipCacheCheck: true # Checks for new versions of sources

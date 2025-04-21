@@ -1,0 +1,93 @@
+sourceAuths:
+  - authAlias: "azureDevOpsENVPAT"
+    userName: "parisbrooker@parisbrooker.co.uk"
+
+  - authAlias: "azureDevOpsPAT"
+    userName: "parisbrooker@parisbrooker.co.uk"
+    pat: "09876"
+
+  - authAlias: "azureDevOpsSSH"
+    userName: "parisbrooker@parisbrooker.co.uk"
+    sshKeyPath: "/home/parisb/.ssh/ado" # If present, TMLPTR_DEFAULT_SSH_KEY_PATH environment variable will overwrite this value, or will be used if this value is not present
+
+sourceSets:
+  - alias: terraformChildSet
+    sources:
+      - terraformChild
+      - doc
+      - vscode
+      - common
+    values:
+      terraformVersionConstraintString: ">= 1, < 2"
+  - alias: terraformDeploymentSet
+    sources:
+      - vscode
+      - terraformDeployment
+      - common
+      - doc
+    values:
+      terraformVersionConstraintString: ">= 1, < 2"
+      terraformVersion: "1.10.5"
+  - alias: goWebSet
+    sources:
+      - goWeb
+      - goTooling
+      - vscode
+      - common
+      - doc
+  - alias: goServiceSet
+    sources:
+      - goService
+      - goTooling
+      - vscode
+      - common
+      - doc
+
+sources:
+  - alias: terraformChild
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.terraform.child"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: terraformDeployment
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.terraform.deployment"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: vscode
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.common.vscode"
+    path: "/terraform"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: common
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.common.repo"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: doc
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.common.docs"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: goWeb
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.go.web"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: goService
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.go.service"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
+
+  - alias: goTooling
+    sourceType: git
+    url: "git@ssh.dev.azure.com:v3/parisbrooker-iac/PLT.TMPLTR.TEMPLATES/tmpltr.go.tooling"
+    path: "/"
+    sourceAuthAlias: "azureDevOpsSSH"
