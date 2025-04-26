@@ -48,12 +48,12 @@ func NewRootCommand() *cobra.Command {
 		Use:   "tmpltr",
 		Short: "tmpltr is a tool for dynamically scaffolding project repositories",
 		Long: `
-	tmpltr allows the building of project repositories using composition from multiple "sources". 
+	tmpltr allows the building of project repositories using composition from multiple "sources".
 	Sources are file storage locations, with git, blob and file sources currently supported.
 	Files within a source can be template files, and values for these templates can be provided via
 	a values file or via the cli when you execute project creation. tmpltr can also add "partials"
-	to an existing repository. You can also use tmpltr to capture a path as a local source, which can 
-	then be committed to a remote.  
+	to an existing repository. You can also use tmpltr to capture a path as a local source, which can
+	then be committed to a remote.
 	`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
