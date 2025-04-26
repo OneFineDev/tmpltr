@@ -1,10 +1,10 @@
 {
   "devDependencies": {
-    "@commitlint/cli": "^17.4.4",
-    "@commitlint/config-conventional": "^17.4.4",
-    "husky": "^9.0.0",
-    "lint-staged": "^13.1.2",
-    "pre-commit": "^1.2.2"
+    "@commitlint/cli": "19.3.0",
+    "@commitlint/config-conventional": "19.2.2",
+    "husky": "9.1.2",
+    "lint-staged": "15.2.7",
+    "pre-commit": "1.2.2"
   },
   "scripts": {
     "test": "pre-commit run",
