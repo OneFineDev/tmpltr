@@ -3,12 +3,14 @@ package services
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 	"text/template/parse"
 
+	"github.com/OneFineDev/tmpltr/internal/storage"
 	"github.com/OneFineDev/tmpltr/internal/types"
 	"github.com/OneFineDev/tmpltr/internal/ui"
 	"github.com/spf13/afero"
@@ -21,25 +23,29 @@ type TemplateService struct {
 	types.TargetFileToTemplateMap
 	Templates []*template.Template
 	types.TemplateValuesMap
-	CurrentFS afero.Fs
+	CurrentFS *storage.SafeFs
 }
 
-func NewTemplateService(currentFs afero.Fs) *TemplateService {
+func NewTemplateService(currentFs *storage.SafeFs) *TemplateService {
 	return &TemplateService{
 		CurrentFS: currentFs,
 	}
+}
+
+func (ts *TemplateService) HandleTemplates() error {
+	return nil
 }
 
 /*
 GetTemplateFiles walks the rootPath and returns a list of all files with the .template extension.
 */
 func (ts *TemplateService) GetTemplateFiles(rootPath string) error {
-	if _, err := ts.CurrentFS.Stat(rootPath); err != nil {
+	if _, err := ts.CurrentFS.Fs.Stat(rootPath); err != nil {
 		return err
 	}
 	templateFiles := []string{}
 
-	_ = afero.Walk(ts.CurrentFS, rootPath, func(path string, info os.FileInfo, err error) error {
+	_ = afero.Walk(ts.CurrentFS.Fs, rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -63,16 +69,24 @@ func (ts *TemplateService) ParseTemplates() error {
 	targetFileToTemplateMap := make(types.TargetFileToTemplateMap)
 
 	for _, file := range ts.TemplateFiles {
-		t, err := template.ParseFS(afero.NewIOFS(ts.CurrentFS), file)
+		// Read the file content directly from Afero filesystem
+		content, err := afero.ReadFile(ts.CurrentFS.Fs, file)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read template file %s: %w", file, err)
 		}
+
+		// Parse the template from string content instead of using ParseFS
+		t, err := template.New(filepath.Base(file)).Option("missingkey=error").Parse(string(content))
+		if err != nil {
+			return fmt.Errorf("failed to parse template %s: %w", file, err)
+		}
+
 		targetFileToTemplateMap[file] = t
 	}
+
 	ts.TargetFileToTemplateMap = targetFileToTemplateMap
 
 	templates := make([]*template.Template, len(targetFileToTemplateMap))
-
 	i := 0
 	for _, tmpl := range ts.TargetFileToTemplateMap {
 		templates[i] = tmpl
@@ -157,8 +171,8 @@ Node:
 }
 
 // ValuesFromFile reads the key:value pairs in values file and returns a map of these.
-func (ts *TemplateService) ValuesFromFile(valuesFilePath string) (map[string]any, error) {
-	yamlData, err := os.ReadFile(valuesFilePath)
+func (ts *TemplateService) ValuesFromFile(r io.Reader) (map[string]any, error) {
+	yamlData, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -185,14 +199,14 @@ func (ts *TemplateService) CreateTemplateValuesMap() {
 }
 
 func (ts *TemplateService) InteractiveInput() error {
-	form, valuesPopualted := ui.RenderForm(ts.TemplateValuesMap)
+	form, valuesPopulated := ui.RenderForm(ts.TemplateValuesMap)
 
 	err := form.Run()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(valuesPopualted)
+	fmt.Println(valuesPopulated)
 	return nil
 }
 
@@ -239,10 +253,10 @@ func (ts *TemplateService) ValidateTemplateValues( //nolint:gocognit // complexi
 }
 
 // RenameTargetTemplateFiles renames the target files by removing the .template suffix.
-func (ts *TemplateService) RenameTargetTemplateFiles(files []string) error {
-	for _, file := range files {
-		name := strings.TrimSuffix(file, ".template")
-		err := os.Rename(file, name)
+func (ts *TemplateService) RenameTargetTemplateFiles() error {
+	for k, _ := range ts.TargetFileToTemplateMap {
+		name := strings.TrimSuffix(k, ".template")
+		err := ts.CurrentFS.Fs.Rename(k, name)
 		if err != nil {
 			return err
 		}
@@ -251,10 +265,10 @@ func (ts *TemplateService) RenameTargetTemplateFiles(files []string) error {
 }
 
 // ExecuteTemplates executes the parsed templates and writes the output to the target files.
-func ExecuteTemplates(tm types.TargetFileToTemplateMap, tvm types.TemplateValuesMap) error {
+func (ts *TemplateService) ExecuteTemplates() error {
 	// path = template
-	for k, v := range tm {
-		f, err := os.Create(k)
+	for k, v := range ts.TargetFileToTemplateMap {
+		f, err := ts.CurrentFS.Fs.Create(k)
 		if err != nil {
 			if errors.Is(err, unix.EBADF) {
 				return fmt.Errorf("bad file descriptor for file %s: %w", k, err)
@@ -262,7 +276,7 @@ func ExecuteTemplates(tm types.TargetFileToTemplateMap, tvm types.TemplateValues
 			return err
 		}
 		defer f.Close()
-		err = v.Execute(f, tvm)
+		err = v.Execute(f, ts.TemplateValuesMap)
 		if err != nil {
 			return err
 		}

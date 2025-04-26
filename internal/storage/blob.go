@@ -7,8 +7,18 @@ import (
 	"github.com/go-git/go-billy/v5"
 )
 
+// NewBlobClient creates a new BlobClient
+func NewBlobClient() *BlobClient {
+	return &BlobClient{}
+}
+
 type BlobClient struct {
-	CurrentSource *types.Source
+	CurrentSource *types.BlobSource
+}
+
+func (bc *BlobClient) Clone(ctx context.Context) (billy.Filesystem, error) {
+	// TODO: Implement git storage source cloning/downloading
+	return nil, nil
 }
 
 func (bc *BlobClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (billy.Filesystem, error) {
@@ -16,19 +26,6 @@ func (bc *BlobClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (bil
 	return nil, nil
 }
 
-// GetCurrentSource returns the currently set source
-func (bc *BlobClient) GetCurrentSource() *types.Source {
-	// TODO: Return the proper *types.Source when fully implemented
-	return bc.CurrentSource
-}
-
-// SetCurrentSource sets the current source
-func (bc *BlobClient) SetCurrentSource(source *types.Source) {
-	// TODO: Validate that source is a *types.Source when fully implemented
-	bc.CurrentSource = source
-}
-
-// NewBlobClient creates a new BlobClient
-func NewBlobClient() *BlobClient {
-	return &BlobClient{}
+func (bc *BlobClient) SetSource(s *types.Source) {
+	bc.CurrentSource = (*types.BlobSource)(s)
 }

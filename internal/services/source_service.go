@@ -15,6 +15,10 @@ import (
 	"github.com/spf13/afero"
 )
 
+type (
+	CtxKeyLogger struct{}
+)
+
 const (
 	logMsgGitClone = "git_clone"
 	logKeyGitRepo  = "repo"
@@ -43,6 +47,12 @@ type SourcesCommandConfig struct {
 
 	// SourceSet, defined in SourceConfigFile, to be rendered in a given execution
 	SourceSet string
+
+	// Values file path, contents of which are used to populate template values
+	ValuesFilePath string
+
+	// Whether to throw error if template execution detects a missing template input value
+	FailOnMissingTemplateValue bool
 }
 
 type SourceClient interface {
@@ -86,22 +96,25 @@ func NewSourceService(sourcesCommandConfig *SourcesCommandConfig, logger *slog.L
 	}
 }
 
-func (ss *SourceService) BuildProjectSourceConfigs() error {
+func ParseSourceConfigFile(file afero.File) (*types.SourceConfig, error) {
+	srcConfig, err := ReadYamlFromFile[types.SourceConfig](file)
+	if err != nil {
+		wrapped := fmt.Errorf("failed to decode source config: %w", err)
+		return nil, wrapped
+	}
+	return &srcConfig, nil
+}
+
+func (ss *SourceService) BuildProjectSourceConfigs(srcConfig *types.SourceConfig) error {
 	// create the Source client map so we can add keys in parseSources()
-	ss.Logger.Info("initializing SourceConfig file parsing...")
+	ss.Logger.Info("building source configs...")
 	ss.SourceClients = make(map[string]SourceClient)
 
-	srcConfig, err := readYamlFromFile[types.SourceConfig](ss.SourceConfigFilePath)
-	if err != nil {
-		wrapped := fmt.Errorf("failed to read source config at %s: %w", ss.SourceConfigFilePath, err)
-		ss.Logger.Error(wrapped.Error())
-	}
-	ss.SourceConfig = &srcConfig
+	ss.SourceConfig = srcConfig
 	ss.parseSourceSets()
 	ss.parseSources()
 	ss.parseSourceAuths()
-	ss.createSourceClients()
-	err = ss.setTargetSourcesFromSourceSet(ss.SourceSet)
+	err := ss.setTargetSourcesFromSourceSet(ss.SourceSet)
 	if err != nil {
 		return err
 	}
@@ -112,37 +125,23 @@ func (ss *SourceService) BuildProjectSourceConfigs() error {
 	return nil
 }
 
-func (ss *SourceService) CloneSources(ctx context.Context, targetFs afero.Fs) (chan billy.Filesystem, chan error) {
-	// errs := []error{}
-	// var mu sync.Mutex // Add mutex to protect the errs slice
-
-	sfs := storage.SafeFs{
-		Fs: targetFs,
-	}
-
-	billyChan := make(chan billy.Filesystem)
-	errChan := make(chan error)
+func (ss *SourceService) CloneSources(ctx context.Context) (chan billy.Filesystem, chan error) {
+	billyChan := make(chan billy.Filesystem, len(ss.TargetSources))
+	errChan := make(chan error, len(ss.TargetSources))
 
 	var wg sync.WaitGroup
 
-	for _, v := range ss.TargetSources {
+	for _, source := range ss.TargetSources {
 		wg.Add(1)
 		go func(source types.Source) {
 			defer wg.Done()
 
-			gc := storage.NewGitClient()
-			gc.CurrentSource = (*types.GitSource)(&source)
-
 			ss.Logger.Info(
 				logMsgGitClone, logKeyGitRepo, source.Alias,
 			)
+			source.Client.SetSource(&source)
 
-			cloneOpts := storage.CloneOpts{
-				DestinationFs:   sfs.Fs,
-				DestinationPath: ss.OutputPath,
-			}
-
-			bfs, err := gc.CloneSource(ctx, cloneOpts)
+			bfs, err := source.Client.Clone(ctx)
 			if err != nil {
 				e := &package_errors.SourceError{
 					Message: fmt.Sprintf("inmem clone failed for %v", source.Alias),
@@ -154,7 +153,7 @@ func (ss *SourceService) CloneSources(ctx context.Context, targetFs afero.Fs) (c
 			}
 
 			billyChan <- bfs
-		}(v)
+		}(source)
 	}
 
 	go func() {
@@ -165,20 +164,20 @@ func (ss *SourceService) CloneSources(ctx context.Context, targetFs afero.Fs) (c
 
 	return billyChan, errChan
 
-	// for {
-	// 	select {
-	// 	case r, more := <-billyChan:
-	// 		if !more {
-	// 			return errs
-	// 		}
-	// 		sfs.CopyFileSystemSafe(r, "/", ss.OutputPath)
+	// 	// for {
+	// 	// 	select {
+	// 	// 	case r, more := <-billyChan:
+	// 	// 		if !more {
+	// 	// 			return errs
+	// 	// 		}
+	// 	// 		sfs.CopyFileSystemSafe(r, "/", ss.OutputPath)
 
-	// 	case e := <-errChan:
-	// 		mu.Lock()
-	// 		errs = append(errs, e)
-	// 		mu.Unlock()
-	// 	}
-	// }
+	// // 	case e := <-errChan:
+	// // 		mu.Lock()
+	// // 		errs = append(errs, e)
+	// // 		mu.Unlock()
+	// // 	}
+	// // }
 }
 
 func (s *SourceService) parseSourceSets() {
@@ -224,23 +223,23 @@ func (s *SourceService) parseSourceAuths() {
 // - GitSourceType: Initializes a Git client using storage.NewGitClient().
 // - FileSourceType: Initializes a File client using storage.NewFileClient().
 // - BlobSourceType: Initializes a Blob client using storage.NewBlobClient().
-func (s *SourceService) createSourceClients() {
-	for k := range s.SourceClients {
-		switch k {
-		case string(types.GitSourceType):
-			s.SourceClients[k] = storage.NewGitClient()
-		case string(types.FileSourceType):
-			s.SourceClients[k] = storage.NewFileClient()
-		case string(types.BlobSourceType):
-			s.SourceClients[k] = storage.NewBlobClient()
-		}
+func createSourceClients(t types.SourceType) (types.SourceCloner, error) {
+	switch t {
+	case types.GitSourceType:
+		return storage.NewGitClient(), nil
+	case types.FileSourceType:
+		return storage.NewFileClient(), nil
+	case types.BlobSourceType:
+		return storage.NewBlobClient(), nil
+	default:
+		return nil, fmt.Errorf("failed to create client for source")
 	}
 }
 
 // setTargetSources sets the target sources for a given alias by iterating through
 // the source aliases in the SourceSets map. It retrieves each source from the
-// SourceMap and adds it to the TargetSources map. If a source alias is not found
-// in the SourceMap, an error is returned.
+// SourceMap and adds it to the TargetSources map. It also inits the source client
+// on the source If a source alias is not found in the SourceMap, an error is returned.
 //
 // Parameters:
 //   - alias: The key used to identify the set of sources in the SourceSets map.
@@ -252,6 +251,12 @@ func (s *SourceService) setTargetSourcesFromSourceSet(alias string) error {
 		source, ok := s.SourceMap[sourceAlias]
 		if !ok {
 			return fmt.Errorf("source not found: %s", sourceAlias)
+		}
+		var err error
+		// Now we know we'll be using this source, initialize its client
+		source.Client, err = createSourceClients(source.SourceType)
+		if err != nil {
+			return fmt.Errorf("%s: %w", sourceAlias, err)
 		}
 		s.TargetSources[sourceAlias] = source
 	}

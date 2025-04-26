@@ -3,6 +3,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Cobra Command - Create Project with values file",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}", // Adjust the path to your Cobra command directory.
+            "args": [
+                "create",
+                "project",
+                "--config=/home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/.tmpltr",
+                "--source-set=terraformChildSet",
+                "--values-file=/home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/values.yaml",
+                "-o",
+                "/home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/output/test",
+            ],
+            "env": {
+                "TMPLTR_FLAGDEBUG": "false"
+            },
+        },
+        {
             "name": "Launch Cobra Command - Get Values",
             "type": "go",
             "request": "launch",
@@ -12,6 +31,7 @@
                 "get",
                 "values",
                 "--config=/home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/.tmpltr",
+                "--source-set=terraformChildSet"
             ],
             "env": {
                 "TMPLTR_FLAGDEBUG": "true"

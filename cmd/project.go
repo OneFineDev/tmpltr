@@ -5,8 +5,15 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"sync"
 
+	package_errors "github.com/OneFineDev/tmpltr/internal/errors"
 	"github.com/OneFineDev/tmpltr/internal/services"
+	"github.com/OneFineDev/tmpltr/internal/storage"
+	"github.com/OneFineDev/tmpltr/internal/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -15,31 +22,91 @@ var sourceCmdCfg *services.SourcesCommandConfig = &services.SourcesCommandConfig
 
 func NewProjectCommand() *cobra.Command {
 	ProjectCmd := &cobra.Command{
-
 		Use:   "project",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+		Short: "Builds a project from the specified SourceSet/Sources",
+		Long: `Project builds a project from the specified SourceSet/Sources
+which are defined in your SourcesConfig file. Where the Sources contain template
+values which need to be provided, these can be provided interactively or by
+passing a values file to the command on the --values-file flag. See 'get values'
+command documentation for an easy way to produce values files.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: Implement logging
-			sourceCmdCfg.SourceConfigFilePath = globalCfg.SourceConfigFile
+			ctx := context.Background()
 
-			ss := services.NewSourceService(sourceCmdCfg, appLogger, cmd.Name())
-			err := ss.BuildProjectSourceConfigs()
+			sourceConfigFile, err := os.Open(globalCfg.SourceConfigFile)
 			if err != nil {
-				return err
+				return fmt.Errorf(package_errors.OpenSourceConfigFileError, err)
+			}
+			defer sourceConfigFile.Close()
+
+			parsedSourcesConfig, err := services.ParseSourceConfigFile(sourceConfigFile)
+			if err != nil {
+				return fmt.Errorf(package_errors.ParseSourceConfigFileError, err)
 			}
 
+			ss := services.NewSourceService(sourceCmdCfg, appLogger, cmd.Name())
+
+			err = ss.BuildProjectSourceConfigs(parsedSourcesConfig)
+			if err != nil {
+				return fmt.Errorf(package_errors.BuildSourceConfigError, err)
+			}
+
+			// As we're building a project this will be a real Os FS
 			osFs := afero.NewOsFs()
 
-			ctx := context.Background()
-			ss.CloneSources(ctx, osFs)
+			// The output path may or may not exist
+			_, err = osFs.Stat(sourceCmdCfg.OutputPath)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					// Create the directory if it doesn't exist
+					err = osFs.MkdirAll(sourceCmdCfg.OutputPath, 0755)
+					if err != nil {
+						return fmt.Errorf("failed to create output directory: %w", err)
+					}
+				} else {
+					// Handle other potential errors
+					return fmt.Errorf("failed to check output path: %w", err)
+				}
+			}
 
-			ts := services.NewTemplateService(osFs)
+			safeFs := &storage.SafeFs{
+				Fs: osFs,
+			}
+
+			mu := sync.Mutex{}
+
+			var receivedErrors []error
+
+			// Clones the sources concurrently
+			billyChan, errChan := ss.CloneSources(ctx)
+
+			// Write to target fs sequentially
+
+			var wg sync.WaitGroup
+
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				for b := range billyChan {
+					safeFs.CopyFileSystemSafe(b, "/", sourceCmdCfg.OutputPath)
+				}
+			}()
+
+			go func() {
+				defer wg.Done()
+				for e := range errChan {
+					mu.Lock()
+					receivedErrors = append(receivedErrors, e)
+					mu.Unlock()
+				}
+			}()
+
+			wg.Wait()
+
+			if len(receivedErrors) > 0 {
+				return package_errors.FlattenCloneErrors(receivedErrors...)
+			}
+
+			ts := services.NewTemplateService(safeFs)
 
 			// Template handling
 			err = ts.GetTemplateFiles(sourceCmdCfg.OutputPath)
@@ -54,14 +121,35 @@ to quickly create a Cobra application.`,
 			// Values population
 			ts.CreateTemplateValuesMap()
 
-			ts.InteractiveInput()
+			if sourceCmdCfg.ValuesFilePath == "" {
+				ts.InteractiveInput()
+			} else {
+				f, err := os.Open(sourceCmdCfg.ValuesFilePath)
+				if err != nil {
+					return fmt.Errorf(package_errors.OpenValuesFileError, err)
+				}
 
+				ts.TemplateValuesMap, err = services.ReadYamlFromFile[types.TemplateValuesMap](f)
+				if err != nil {
+					return fmt.Errorf(package_errors.OpenValuesFileError, err)
+				}
+			}
+
+			err = ts.ExecuteTemplates()
+			if err != nil {
+				return fmt.Errorf(package_errors.TemplateExecutionError, err)
+			}
+
+			err = ts.RenameTargetTemplateFiles()
+			if err != nil {
+				return fmt.Errorf(package_errors.TemplateFileRenameError, err)
+			}
 			return nil
 		},
 	}
 
 	ProjectCmd.Flags().StringVarP(
-		&sourceCmdCfg.OutputPath, "output-path", "o", "", "the path in which the sourceset/sources will be rendered",
+		&sourceCmdCfg.OutputPath, "output-path", "o", "", "the path in which the SourceSet/Sources will be rendered",
 	)
 	ProjectCmd.Flags().StringVarP(
 		&sourceCmdCfg.ProjectName, "project-name", "p", "", "name of the project/new repository",
@@ -74,6 +162,12 @@ to quickly create a Cobra application.`,
 	)
 	ProjectCmd.Flags().StringSliceVar(
 		&sourceCmdCfg.Sources, "sources", []string{}, "list of sources (defined in the sources config file) this execution will build",
+	)
+	ProjectCmd.Flags().StringVarP(
+		&sourceCmdCfg.ValuesFilePath, "values-file", "f", "", "path to a values file used to populate template values. falls into interactive mode if not provided.",
+	)
+	ProjectCmd.Flags().BoolVarP(
+		&sourceCmdCfg.FailOnMissingTemplateValue, "fail-on-missing-value", "m", false, "whether to fail project generation is a template input value is missing.",
 	)
 
 	ProjectCmd.MarkFlagRequired("output-path")

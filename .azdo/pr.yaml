@@ -1,0 +1,99 @@
+trigger: none
+
+resources:
+  containers:
+    - container: 'sonarscan'
+      image: 'sonarsource/sonarcloud-scan'
+  repositories:
+    - repository: pipelineTemplates
+      type: git
+      name: "PLT.INFRA.PIPELINES/PLT.INFRA.PIPELINES"
+      ref: "refs/heads/main"
+
+variables:
+  orgName:  'parisbrooker-iac'
+stages:
+  - stage: entry_criteria
+    displayName: "[STAGE] Entry Criteria"
+    jobs:
+      - template: "/jobs/precommit_checks_job.yaml@pipelineTemplates"
+      - template: "/jobs/commitlint_lint_job.yaml@pipelineTemplates"
+  - stage: 'stage_test_build'
+    displayName: '[STAGE] Test and Build'
+    variables:
+      GOVERSION: '1.23.5'   # Version of Go tools used for building and testing
+      CGO_ENABLED: '0'      # Disable cgo to get a static binary
+      GOOS: 'linux'
+      GOARCH: 'amd64'
+    jobs:
+
+    - job: job_go_test_build
+      displayName: '[JOB] Test and Build'
+      pool:
+        vmImage: 'ubuntu-latest'
+
+      steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - task: GoTool@0
+        displayName: '[TOOLS] Install Go $(GOVERSION)'
+        inputs:
+          version: $(GOVERSION)
+
+      - task: UseDotNet@2
+        displayName: '[TOOLS] Install .NET Core sdk 8.0.x'
+        inputs:
+          version: 8.0.x
+
+      - script: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+        name: taskfile
+        displayName: '[TOOLS] Install Taskfile'
+
+      - task: SonarCloudPrepare@3
+        displayName: '[SCAN] Prepare analysis configuration'
+        inputs:
+          SonarCloud: 'testing'
+          organization: 'parisbrooker-iac'
+          scannerMode: 'CLI'
+          projectKey: parisbrooker-iac_rp.plt.product.tmpltr
+          projectName: rp.plt.product.tmpltr
+
+      - script: |
+          # Get tools for converting Go's test reports
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.63.4
+          ~/.local/bin/task get_test_dependencies
+          ~/.local/bin/task test_coverage
+          $HOME/go/bin/golangci-lint run ./...
+
+        displayName: '[TEST] Go Test'
+        failOnStderr: false
+
+      - script: |
+          ~/.local/bin/task build
+        displayName: '[BUILD] Go Binary'
+
+      - task: SonarCloudAnalyze@3
+        displayName: '[SCAN] Run SonarCloud analysis'
+
+      - task: SonarCloudPublish@3
+        displayName: '[SCAN] Publish results on build summary'
+
+      - task: reportgenerator@5
+        displayName: '[TEST] Generate Report'
+        inputs:
+          reports: 'coverage.xml'
+          reportTypes: "HtmlInline_AzurePipelines_Dark;Cobertura"
+          publishCodeCoverageResults: true
+
+      - task: PublishTestResults@2
+        displayName: '[TEST] Publish Test Results'
+        inputs:
+          testRunner: JUnit
+          testResultsFiles: $(Build.SourcesDirectory)/report.xml
+          searchFolder: $(Build.SourcesDirectory)
+
+      - publish: '$(Build.SourcesDirectory)/bin/tmpltr'
+        artifact: 'Executable'
+        displayName: '[BUILD] Publish pipeline artifact'

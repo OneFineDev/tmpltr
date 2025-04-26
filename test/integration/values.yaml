@@ -1,0 +1,8 @@
+provider:
+    azureApi:
+        versionConstraint: ">= 2.0.0"
+    azurerm:
+        versionConstraint: ">= 4, <5"
+terraform:
+    version: "1.11.0"
+    versionConstraint: ">1, <2"

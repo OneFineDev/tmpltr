@@ -29,8 +29,7 @@ func NewGitClient() *GitClient {
 	return &GitClient{}
 }
 
-func (gc *GitClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (billy.Filesystem, error) {
-	// File systems #TODO: Implement local save
+func (gc *GitClient) Clone(ctx context.Context) (billy.Filesystem, error) {
 	mfs := memfs.New()
 
 	// Check that auth method matches transport
@@ -97,10 +96,6 @@ func (gc *GitClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (bill
 	// return nil
 }
 
-func (g *GitClient) GetCurrentSource() *types.Source {
-	return (*types.Source)(g.CurrentSource)
-}
-
-func (g *GitClient) SetCurrentSource(s *types.Source) {
+func (g *GitClient) SetSource(s *types.Source) {
 	g.CurrentSource = (*types.GitSource)(s)
 }

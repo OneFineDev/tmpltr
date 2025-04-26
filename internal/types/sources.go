@@ -1,5 +1,17 @@
 package types
 
+import (
+	"context"
+
+	"github.com/go-git/go-billy/v5"
+)
+
+type SourceCloner interface {
+	Clone(ctx context.Context) (billy.Filesystem, error)
+	SetSource(s *Source)
+	// GetSource() Source
+}
+
 type SourceType string
 
 type (
@@ -15,19 +27,20 @@ const (
 )
 
 /*
-Source represents the source of a set of template files that will be rendered together
+Source represents the source of a set of template files that will be rendered together.
 */
 type Source struct {
-	SourceType      `       json:"source_type"       yaml:"sourceType"`
+	SourceType      `             json:"source_type"       yaml:"sourceType"`
 	URL             string `json:"url"               yaml:"url"`
 	Alias           string `json:"alias"             yaml:"alias"`
 	Path            string `json:"path"              yaml:"path"`
-	*SourceAuth     `       json:"-"                 yaml:",inline"`
+	*SourceAuth     `             json:"-"                 yaml:",inline"`
 	SourceAuthAlias string `json:"source_auth_alias" yaml:"sourceAuthAlias"`
+	Client          SourceCloner
 }
 
 /*
-SourceAuth represents the authentication details for the source in which it is embedded
+SourceAuth represents the authentication details for the source in which it is embedded.
 */
 type SourceAuth struct {
 	AuthAlias string `json:"auth_alias"   yaml:"authAlias"`

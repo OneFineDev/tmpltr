@@ -1,5 +1,15 @@
+version: "1"
+
+authentication:
+  azureDevops:
+    sshKey: /home/parisb/.ssh/ado
+
+#
+sourceConfigFiles:
+  - /home/parisb/repos/PLT.PRODUCT.TMPLTR/tmpltr/test/.tmpltr/.sources.yaml
+
 logging:
-  level: INFO
+  level: ERROR
   format: text
   outputs: [stdout]
 verbose: false

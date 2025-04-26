@@ -8,27 +8,24 @@ import (
 )
 
 type FileClient struct {
-	CurrentSource *types.Source
+	CurrentSource *types.FileSource
 }
 
-func (fc *FileClient) CloneSource(ctx context.Context, cloneOpts CloneOpts) (billy.Filesystem, error) {
+// NewFileClient creates a new FileClient.
+func NewFileClient() *FileClient {
+	return &FileClient{}
+}
+
+func (fc *FileClient) Clone(ctx context.Context) (billy.Filesystem, error) {
+	// TODO: Implement git storage source cloning/downloading
+	return nil, nil
+}
+func (fc *FileClient) CloneSource(ctx context.Context) (billy.Filesystem, error) {
 	// TODO: Implement git storage source cloning/downloading
 	return nil, nil
 }
 
-// GetCurrentSource returns the currently set source
-func (fc *FileClient) GetCurrentSource() *types.Source {
-	// TODO: Return the proper *types.Source when fully implemented
-	return fc.CurrentSource
-}
-
-// SetCurrentSource sets the current source
-func (fc *FileClient) SetCurrentSource(source *types.Source) {
-	// TODO: Validate that source is a *types.Source when fully implemented
-	fc.CurrentSource = source
-}
-
-// NewFileClient creates a new FileClient
-func NewFileClient() *FileClient {
-	return &FileClient{}
+// SetCurrentSource sets the current source.
+func (fc *FileClient) SetSource(s *types.Source) {
+	fc.CurrentSource = (*types.FileSource)(s)
 }

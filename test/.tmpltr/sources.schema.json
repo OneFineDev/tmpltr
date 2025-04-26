@@ -1,0 +1,144 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Tmpltr Sources Configuration",
+    "description": "Schema for validating Tmpltr source configuration files",
+    "type": "object",
+    "required": [
+        "sourceAuths",
+        "sourceSets",
+        "sources"
+    ],
+    "properties": {
+        "sourceAuths": {
+            "type": "array",
+            "description": "Authentication configurations for source repositories",
+            "items": {
+                "type": "object",
+                "required": [
+                    "authAlias"
+                ],
+                "properties": {
+                    "authAlias": {
+                        "type": "string",
+                        "description": "Unique identifier for this authentication configuration"
+                    },
+                    "userName": {
+                        "type": "string",
+                        "description": "Username for authentication"
+                    },
+                    "pat": {
+                        "type": "string",
+                        "description": "Personal Access Token"
+                    },
+                    "sshKeyPath": {
+                        "type": "string",
+                        "description": "Path to SSH key file"
+                    },
+                    "key": {
+                        "type": "string",
+                        "description": "Authentication key"
+                    },
+                    "token": {
+                        "type": "string",
+                        "description": "Authentication token"
+                    }
+                }
+            }
+        },
+        "sourceSets": {
+            "type": "array",
+            "description": "Collections of sources that represent a project",
+            "items": {
+                "type": "object",
+                "required": [
+                    "alias"
+                ],
+                "properties": {
+                    "alias": {
+                        "type": "string",
+                        "description": "Unique identifier for this source set"
+                    },
+                    "sources": {
+                        "type": "array",
+                        "description": "List of source aliases in this set",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "values": {
+                        "type": "object",
+                        "description": "Configuration values for this source set",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "sources": {
+            "type": "array",
+            "description": "Source repositories containing template files",
+            "items": {
+                "type": "object",
+                "required": [
+                    "alias",
+                    "sourceType"
+                ],
+                "properties": {
+                    "alias": {
+                        "type": "string",
+                        "description": "Unique identifier for this source"
+                    },
+                    "sourceType": {
+                        "type": "string",
+                        "description": "Type of the source",
+                        "enum": [
+                            "git",
+                            "file",
+                            "blob"
+                        ]
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "URL of the source repository"
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Path within the source repository"
+                    },
+                    "sourceAuthAlias": {
+                        "type": "string",
+                        "description": "Reference to an auth configuration"
+                    },
+                    "branch": {
+                        "type": "string",
+                        "description": "Branch to use for Git sources"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "description": "Git reference (tag, commit, etc.) to use"
+                    }
+                },
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "sourceType": {
+                                    "enum": [
+                                        "git"
+                                    ]
+                                }
+                            }
+                        },
+                        "then": {
+                            "required": [
+                                "url"
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "additionalProperties": false
+}

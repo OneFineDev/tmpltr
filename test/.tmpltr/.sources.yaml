@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./sources.schema.json
 sourceAuths:
   - authAlias: "azureDevOpsENVPAT"
     userName: "parisbrooker@parisbrooker.co.uk"

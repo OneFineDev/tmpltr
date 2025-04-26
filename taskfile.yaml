@@ -1,0 +1,55 @@
+version: "3"
+
+vars:
+  PKG: tmpltr
+
+tasks:
+  ginit:
+    cmds:
+      - go mod init "{{.PKG}}"
+    ENV:
+      PKG_NAME: $PKG
+
+  build:
+    cmds:
+      - go build -o bin/{{.PKG}} ./main.go
+    ENV:
+      PKG_NAME: $PKG
+
+  ## LINTING
+  lint:
+    cmds:
+      - golangci-lint run ./...
+    ENV:
+      PKG_NAME: $PKG
+
+  ## TESTING
+  test_unit:
+    cmds:
+      - go test -v ./...
+    ENV:
+      PKG_NAME: $PKG
+
+  test_integration:
+    cmds:
+      - go test -v -tags=integration ./... -count=1
+    ENV:
+      PKG_NAME: $PKG
+
+  test_coverage:
+    cmds:
+      - go test -v ./... -coverprofile=coverage.txt -covermode count -json 2>&1 | $HOME/go/bin/go-junit-report > report.xml
+      - $HOME/go/bin/gocov convert coverage.txt > coverage.json
+      - $HOME/go/bin/gocov-xml < coverage.json > coverage.xml
+    ENV:
+      PKG_NAME: $PKG
+
+  get_test_dependencies:
+    cmds:
+      - go install github.com/jstemmer/go-junit-report/v2@latest 2>&1
+      - go install github.com/axw/gocov/gocov@latest 2>&1
+      - go install github.com/AlekSi/gocov-xml@latest 2>&1
+      - go install github.com/matm/gocov-html/cmd/gocov-html@latest 2>&1
+      - go install github.com/cucumber/godog/cmd/godog@latest 2>&1
+    ENV:
+      PKG_NAME: $PKG
