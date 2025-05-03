@@ -13,10 +13,8 @@ jobs:
   entry:
     runs-on: ubuntu-latest
     steps:
-      - name: Commitlint CLI
-        # You may pin to the exact commit or the version.
-        # uses: bennypowers/commitlint-gh-actions@e2376695382ef566db685cdf4dbcd144aafb6911
-        uses: bennypowers/commitlint-gh-actions@v1.0.1
+      - uses: actions/checkout@v4
+      - uses: wagoid/commitlint-github-action@v6
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v3
       - uses: pre-commit/action@v3.0.1
