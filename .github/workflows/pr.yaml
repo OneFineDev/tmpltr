@@ -10,6 +10,17 @@ on:
     branches: ["main"]
 
 jobs:
+  entry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Commitlint CLI
+        # You may pin to the exact commit or the version.
+        # uses: bennypowers/commitlint-gh-actions@e2376695382ef566db685cdf4dbcd144aafb6911
+        uses: bennypowers/commitlint-gh-actions@v1.0.1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - uses: pre-commit/action@v3.0.1
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -40,18 +51,3 @@ jobs:
         with:
           name: code-coverage
           path: coverage.txt
-
-  code_coverage:
-    name: "Code coverage report"
-    if: github.event_name == 'pull_request' # Do not run when workflow is triggered by push to main branch
-    runs-on: ubuntu-latest
-    needs: build # Depends on the artifact uploaded by the "unit_tests" job
-    permissions:
-      contents: read
-      actions: read # to download code coverage results from "test" job
-      pull-requests: write # write permission needed to comment on PR
-    steps:
-      - uses: fgrosse/go-coverage-report@v1.1.1 # Consider using a Git revision for maximum security
-        with:
-          coverage-artifact-name: "code-coverage" # can be omitted if you used this default value
-          coverage-file-name: "coverage.txt" # can be omitted if you used this default valu
