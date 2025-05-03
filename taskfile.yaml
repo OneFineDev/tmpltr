@@ -38,7 +38,7 @@ tasks:
 
   test_coverage:
     cmds:
-      - go test -v ./... -coverprofile=coverage.txt -covermode count -json 2>&1 | $HOME/go/bin/go-junit-report > report.xml
+      - go test -v ./... -coverprofile=coverage.txt -covermode count=1 -json 2>&1 | $HOME/go/bin/go-junit-report > report.xml
       - $HOME/go/bin/gocov convert coverage.txt > coverage.json
       - $HOME/go/bin/gocov-xml < coverage.json > coverage.xml
     ENV:
