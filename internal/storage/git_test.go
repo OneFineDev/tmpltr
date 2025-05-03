@@ -24,7 +24,7 @@ import (
 // setupFixtureGitRepo sets up an in-memory Git repository with test files.
 func setupFixtureGitRepo(t *testing.T) (string, string) {
 	// Create a temporary file for SSH key simulation
-	tmpKeyFile, err := os.CreateTemp("", "test-ssh-key")
+	tmpKeyFile, err := os.CreateTemp(t.TempDir(), "test-ssh-key")
 	require.NoError(t, err)
 	sshKeyPath := tmpKeyFile.Name()
 	t.Cleanup(func() {
@@ -90,7 +90,7 @@ type FixtureGitClient struct {
 	CurrentSource *types.GitSource
 }
 
-func (gc *FixtureGitClient) CloneSource(ctx context.Context, cloneOpts storage.CloneOpts) (billy.Filesystem, error) {
+func (gc *FixtureGitClient) CloneSource(_ context.Context) (billy.Filesystem, error) {
 	// Create a memory filesystem with our test files
 	mfs := memfs.New()
 
@@ -136,12 +136,12 @@ func (gc *FixtureGitClient) CloneSource(ctx context.Context, cloneOpts storage.C
 	return mfs, nil
 }
 
-func (g *FixtureGitClient) GetCurrentSource() *types.Source {
-	return (*types.Source)(g.CurrentSource)
+func (gc *FixtureGitClient) GetCurrentSource() *types.Source {
+	return (*types.Source)(gc.CurrentSource)
 }
 
-func (g *FixtureGitClient) SetCurrentSource(s *types.Source) {
-	g.CurrentSource = (*types.GitSource)(s)
+func (gc *FixtureGitClient) SetCurrentSource(s *types.Source) {
+	gc.CurrentSource = (*types.GitSource)(s)
 }
 
 func TestCloneSource(t *testing.T) {
@@ -161,7 +161,7 @@ func TestCloneSource(t *testing.T) {
 			currentSource: &types.GitSource{
 				URL: fixtureRepoURL,
 				SourceAuth: &types.SourceAuth{
-					SshKey: sshKeyPath,
+					SSHKey: sshKeyPath,
 				},
 				Path: "/",
 			},
@@ -204,7 +204,7 @@ func TestCloneSource(t *testing.T) {
 			gc := &FixtureGitClient{
 				CurrentSource: tt.currentSource,
 			}
-			bfs, err = gc.CloneSource(context.Background(), tt.cloneOpts)
+			bfs, err = gc.CloneSource(t.Context())
 			// } else {
 			// 	// Use the real GitClient
 			// 	gc := &GitClient{

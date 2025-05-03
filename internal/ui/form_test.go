@@ -1,10 +1,12 @@
 //go:build !integration
 
-package ui
+package ui_test
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/OneFineDev/tmpltr/internal/ui"
 )
 
 func TestFlatten(t *testing.T) {
@@ -72,7 +74,7 @@ func TestFlatten(t *testing.T) {
 			dest := make(map[string]*string)
 
 			// Act
-			Flatten(tt.prefix, tt.src, dest)
+			ui.Flatten(tt.prefix, tt.src, dest)
 
 			// Assert
 			if len(dest) != len(tt.expected) {
@@ -189,7 +191,7 @@ func TestRebuild(t *testing.T) {
 			templateValuesMap := tt.templateValuesMap
 
 			// Act
-			result := Rebuild(formMap, templateValuesMap)
+			result := ui.Rebuild(formMap, templateValuesMap)
 
 			// Assert
 			if !reflect.DeepEqual(result, tt.expectedResult) {

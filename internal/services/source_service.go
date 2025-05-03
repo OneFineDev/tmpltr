@@ -2,14 +2,15 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path"
 	"sync"
 
-	package_errors "github.com/OneFineDev/tmpltr/internal/errors"
 	"github.com/OneFineDev/tmpltr/internal/storage"
+	package_errors "github.com/OneFineDev/tmpltr/internal/tmpltrerrors"
 	"github.com/OneFineDev/tmpltr/internal/types"
 	"github.com/go-git/go-billy/v5"
 	"github.com/spf13/afero"
@@ -180,19 +181,19 @@ func (ss *SourceService) CloneSources(ctx context.Context) (chan billy.Filesyste
 	// // }
 }
 
-func (s *SourceService) parseSourceSets() {
-	s.SourceSets = make(map[string]types.SourceSet)
-	for _, sourceSet := range s.SourceConfig.SourceSets {
-		s.SourceSets[sourceSet.Alias] = sourceSet
+func (ss *SourceService) parseSourceSets() {
+	ss.SourceSets = make(map[string]types.SourceSet)
+	for _, sourceSet := range ss.SourceConfig.SourceSets {
+		ss.SourceSets[sourceSet.Alias] = sourceSet
 	}
 }
 
-func (s *SourceService) parseSources() {
-	s.TargetSources = make(map[string]types.Source)
-	s.SourceMap = make(map[string]types.Source)
-	for _, source := range s.SourceConfig.Sources {
-		s.SourceClients[string(source.SourceType)] = nil
-		s.SourceMap[source.Alias] = source
+func (ss *SourceService) parseSources() {
+	ss.TargetSources = make(map[string]types.Source)
+	ss.SourceMap = make(map[string]types.Source)
+	for _, source := range ss.SourceConfig.Sources {
+		ss.SourceClients[string(source.SourceType)] = nil
+		ss.SourceMap[source.Alias] = source
 	}
 }
 
@@ -201,18 +202,18 @@ func (s *SourceService) parseSources() {
 // Personal Access Token (PAT) from the environment variables using a key formatted
 // as "TMLPTR_<AuthAlias>_PAT". If a PAT is found, it updates the corresponding
 // SourceAuth in the SourceAuthMap with the retrieved PAT.
-func (s *SourceService) parseSourceAuths() {
-	s.SourceAuthMap = make(map[string]types.SourceAuth)
-	for _, sourceAuth := range s.SourceConfig.SourceAuths {
-		s.SourceAuthMap[sourceAuth.AuthAlias] = sourceAuth
+func (ss *SourceService) parseSourceAuths() {
+	ss.SourceAuthMap = make(map[string]types.SourceAuth)
+	for _, sourceAuth := range ss.SourceConfig.SourceAuths {
+		ss.SourceAuthMap[sourceAuth.AuthAlias] = sourceAuth
 
 		envVarString := fmt.Sprintf("TMLPTR_%s_PAT", sourceAuth.AuthAlias)
 
 		pat := os.Getenv(envVarString)
 		if pat != "" {
-			auth := s.SourceAuthMap[sourceAuth.AuthAlias]
+			auth := ss.SourceAuthMap[sourceAuth.AuthAlias]
 			auth.Pat = pat
-			s.SourceAuthMap[sourceAuth.AuthAlias] = auth
+			ss.SourceAuthMap[sourceAuth.AuthAlias] = auth
 		}
 	}
 }
@@ -232,7 +233,7 @@ func createSourceClients(t types.SourceType) (types.SourceCloner, error) {
 	case types.BlobSourceType:
 		return storage.NewBlobClient(), nil
 	default:
-		return nil, fmt.Errorf("failed to create client for source")
+		return nil, errors.New("failed to create client for source")
 	}
 }
 
@@ -246,9 +247,9 @@ func createSourceClients(t types.SourceType) (types.SourceCloner, error) {
 //
 // Returns:
 //   - error: An error is returned if a source alias is not found in the SourceMap.
-func (s *SourceService) setTargetSourcesFromSourceSet(alias string) error {
-	for _, sourceAlias := range s.SourceSets[alias].Sources {
-		source, ok := s.SourceMap[sourceAlias]
+func (ss *SourceService) setTargetSourcesFromSourceSet(alias string) error {
+	for _, sourceAlias := range ss.SourceSets[alias].Sources {
+		source, ok := ss.SourceMap[sourceAlias]
 		if !ok {
 			return fmt.Errorf("source not found: %s", sourceAlias)
 		}
@@ -258,20 +259,20 @@ func (s *SourceService) setTargetSourcesFromSourceSet(alias string) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", sourceAlias, err)
 		}
-		s.TargetSources[sourceAlias] = source
+		ss.TargetSources[sourceAlias] = source
 	}
 	return nil
 }
 
-func (s *SourceService) setSourceAuthForSources() error {
-	for _, source := range s.TargetSources {
+func (ss *SourceService) setSourceAuthForSources() error {
+	for _, source := range ss.TargetSources {
 		if source.SourceAuthAlias != "" {
-			sourceAuth, ok := s.SourceAuthMap[source.SourceAuthAlias]
+			sourceAuth, ok := ss.SourceAuthMap[source.SourceAuthAlias]
 			if !ok {
 				return fmt.Errorf("source auth not found: %s", source.SourceAuthAlias)
 			}
 			source.SourceAuth = &sourceAuth
-			s.TargetSources[source.Alias] = source
+			ss.TargetSources[source.Alias] = source
 		}
 	}
 	return nil

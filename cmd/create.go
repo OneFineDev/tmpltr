@@ -1,17 +1,10 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-// createCmd represents the create command
 func NewCreateCommand() *cobra.Command {
-
 	CreateCmd := &cobra.Command{
 		Use:   "create",
 		Short: "A brief description of your command",
@@ -21,9 +14,7 @@ func NewCreateCommand() *cobra.Command {
 	Cobra is a CLI library for Go that empowers applications.
 	This application is a tool to generate the needed files
 	to quickly create a Cobra application.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("create called")
-		},
+		Run: func(_ *cobra.Command, _ []string) {},
 	}
 
 	CreateCmd.AddCommand(

@@ -46,7 +46,7 @@ type SourceAuth struct {
 	AuthAlias string `json:"auth_alias"   yaml:"authAlias"`
 	UserName  string `json:"username"     yaml:"userName"`
 	Pat       string `json:"pat"          yaml:"pat"`
-	SshKey    string `json:"ssh_key_path" yaml:"sshKeyPath"`
+	SSHKey    string `json:"ssh_key_path" yaml:"sshKeyPath"`
 	Key       string `json:"key"          yaml:"key"`
 	Token     string `json:"token"        yaml:"token"`
 }

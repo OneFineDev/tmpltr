@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -9,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	package_errors "github.com/OneFineDev/tmpltr/internal/errors"
 	"github.com/OneFineDev/tmpltr/internal/services"
 	"github.com/OneFineDev/tmpltr/internal/storage"
+	package_errors "github.com/OneFineDev/tmpltr/internal/tmpltrerrors"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -19,7 +16,7 @@ import (
 
 const tempPath string = "temp" //  since this will always run in mem, making the "output" path constant
 
-func NewValuesCommand() *cobra.Command {
+func NewValuesCommand() *cobra.Command { //nolint:funlen
 	ValuesCmd := &cobra.Command{
 		Use:   "values",
 		Short: "A brief description of your command",
@@ -29,7 +26,7 @@ func NewValuesCommand() *cobra.Command {
 	Cobra is a CLI library for Go that empowers applications.
 	This application is a tool to generate the needed files
 	to quickly Values a Cobra application.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			sourceConfigFile, err := os.Open(globalCfg.SourceConfigFile)
 			if err != nil {
 				return fmt.Errorf("error opening source config file: %w", err)
@@ -68,11 +65,11 @@ func NewValuesCommand() *cobra.Command {
 
 			var wg sync.WaitGroup
 
-			wg.Add(2)
+			wg.Add(2) //nolint:mnd
 			go func() {
 				defer wg.Done()
 				for b := range billyChan {
-					safeFs.CopyFileSystemSafe(b, "/", tempPath)
+					_ = safeFs.CopyFileSystemSafe(b, "/", tempPath)
 				}
 			}()
 
@@ -128,7 +125,7 @@ func NewValuesCommand() *cobra.Command {
 				return err
 			}
 
-			out.Write(p)
+			_, _ = out.Write(p)
 
 			return nil
 		},

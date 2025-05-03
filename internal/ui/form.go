@@ -7,15 +7,6 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-var (
-	Burger       string
-	toppings     []string
-	sauceLevel   int
-	name         string
-	instructions string
-	discount     bool
-)
-
 func RenderForm(valuesMap types.TemplateValuesMap) (*huh.Form, map[string]*string) {
 	outMap := make(map[string]*string)
 
@@ -23,7 +14,7 @@ func RenderForm(valuesMap types.TemplateValuesMap) (*huh.Form, map[string]*strin
 
 	inputSlice := []huh.Field{}
 
-	for k, _ := range outMap {
+	for k := range outMap {
 		value := outMap[k]
 		i := huh.NewInput().Description(k).Inline(true).Value(value)
 
@@ -66,31 +57,31 @@ func Rebuild(formMap map[string]*string, templateValuesMap map[string]any) map[s
 		case 2: //nolint:mnd // it's fine
 			key1 := keys[0]
 			key2 := keys[1]
-			if nestedMap, ok := templateValuesMap[key1].(map[string]any); ok {
+			if nestedMap, okNested := templateValuesMap[key1].(map[string]any); okNested {
 				nestedMap[key2] = *v
 			} else {
-				nestedMap := make(map[string]any)
-				nestedMap[key2] = *v
-				templateValuesMap[key1] = nestedMap
+				nMap := make(map[string]any)
+				nMap[key2] = *v
+				templateValuesMap[key1] = nMap
 			}
 		case 3: //nolint:mnd // it's fine
 			key1 := keys[0]
 			key2 := keys[1]
 			key3 := keys[2]
-			if nestedMap, ok := templateValuesMap[key1].(map[string]any); ok {
-				if innerMap, ok := nestedMap[key2].(map[string]any); ok {
+			if nestedMap, okNested := templateValuesMap[key1].(map[string]any); okNested {
+				if innerMap, okInner := nestedMap[key2].(map[string]any); okInner {
 					innerMap[key3] = *v
 				} else {
-					innerMap := make(map[string]any)
-					innerMap[key3] = *v
-					nestedMap[key2] = innerMap
+					inMap := make(map[string]any)
+					inMap[key3] = *v
+					nestedMap[key2] = inMap
 				}
 			} else {
-				nestedMap := make(map[string]any)
+				nMap := make(map[string]any)
 				innerMap := make(map[string]any)
 				innerMap[key3] = *v
-				nestedMap[key2] = innerMap
-				templateValuesMap[key1] = nestedMap
+				nMap[key2] = innerMap
+				templateValuesMap[key1] = nMap
 			}
 		default:
 			// Handle deeper nesting if required

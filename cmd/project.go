@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -10,17 +7,17 @@ import (
 	"os"
 	"sync"
 
-	package_errors "github.com/OneFineDev/tmpltr/internal/errors"
 	"github.com/OneFineDev/tmpltr/internal/services"
 	"github.com/OneFineDev/tmpltr/internal/storage"
+	package_errors "github.com/OneFineDev/tmpltr/internal/tmpltrerrors"
 	"github.com/OneFineDev/tmpltr/internal/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
-var sourceCmdCfg *services.SourcesCommandConfig = &services.SourcesCommandConfig{}
+var sourceCmdCfg *services.SourcesCommandConfig = &services.SourcesCommandConfig{} //nolint:gochecknoglobals //will fix
 
-func NewProjectCommand() *cobra.Command {
+func NewProjectCommand() *cobra.Command { //nolint:gocognit,funlen
 	ProjectCmd := &cobra.Command{
 		Use:   "project",
 		Short: "Builds a project from the specified SourceSet/Sources",
@@ -29,7 +26,7 @@ which are defined in your SourcesConfig file. Where the Sources contain template
 values which need to be provided, these can be provided interactively or by
 passing a values file to the command on the --values-file flag. See 'get values'
 command documentation for an easy way to produce values files.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := context.Background()
 
 			sourceConfigFile, err := os.Open(globalCfg.SourceConfigFile)
@@ -58,7 +55,7 @@ command documentation for an easy way to produce values files.`,
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					// Create the directory if it doesn't exist
-					err = osFs.MkdirAll(sourceCmdCfg.OutputPath, 0755)
+					err = osFs.MkdirAll(sourceCmdCfg.OutputPath, 0755) //nolint:mnd
 					if err != nil {
 						return fmt.Errorf("failed to create output directory: %w", err)
 					}
@@ -83,11 +80,11 @@ command documentation for an easy way to produce values files.`,
 
 			var wg sync.WaitGroup
 
-			wg.Add(2)
+			wg.Add(2) //nolint:mnd
 			go func() {
 				defer wg.Done()
 				for b := range billyChan {
-					safeFs.CopyFileSystemSafe(b, "/", sourceCmdCfg.OutputPath)
+					_ = safeFs.CopyFileSystemSafe(b, "/", sourceCmdCfg.OutputPath)
 				}
 			}()
 
@@ -122,16 +119,19 @@ command documentation for an easy way to produce values files.`,
 			ts.CreateTemplateValuesMap()
 
 			if sourceCmdCfg.ValuesFilePath == "" {
-				ts.InteractiveInput()
+				e := ts.InteractiveInput()
+				if e != nil {
+					return e
+				}
 			} else {
-				f, err := os.Open(sourceCmdCfg.ValuesFilePath)
-				if err != nil {
-					return fmt.Errorf(package_errors.OpenValuesFileError, err)
+				f, e := os.Open(sourceCmdCfg.ValuesFilePath)
+				if e != nil {
+					return fmt.Errorf(package_errors.OpenValuesFileError, e)
 				}
 
-				ts.TemplateValuesMap, err = services.ReadYamlFromFile[types.TemplateValuesMap](f)
-				if err != nil {
-					return fmt.Errorf(package_errors.OpenValuesFileError, err)
+				ts.TemplateValuesMap, e = services.ReadYamlFromFile[types.TemplateValuesMap](f)
+				if e != nil {
+					return fmt.Errorf(package_errors.OpenValuesFileError, e)
 				}
 			}
 
@@ -170,7 +170,7 @@ command documentation for an easy way to produce values files.`,
 		&sourceCmdCfg.FailOnMissingTemplateValue, "fail-on-missing-value", "m", false, "whether to fail project generation is a template input value is missing.",
 	)
 
-	ProjectCmd.MarkFlagRequired("output-path")
+	_ = ProjectCmd.MarkFlagRequired("output-path")
 	ProjectCmd.MarkFlagsOneRequired("source-set", "sources")
 	ProjectCmd.MarkFlagsMutuallyExclusive("source-set", "sources")
 

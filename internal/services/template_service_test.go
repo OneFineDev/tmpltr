@@ -46,7 +46,7 @@ func TestGetTemplateFiles(t *testing.T) { //nolint:gocognit
 		},
 		{
 			name: "Root path does not exist",
-			setupFs: func(fs afero.Fs) {
+			setupFs: func(_ afero.Fs) {
 				// No setup needed
 			},
 			rootPath:    "/nonexistent",
@@ -395,10 +395,8 @@ func TestCreateTemplateValuesMap(t *testing.T) { //nolint:gocognit
 						t.Errorf("expected errors but got none")
 					}
 				}
-			} else {
-				if !reflect.DeepEqual(service.TemplateValuesMap, tt.expectedValues) {
-					t.Errorf("expected values map %v, got %v", tt.expectedValues, service.TemplateValuesMap)
-				}
+			} else if !reflect.DeepEqual(service.TemplateValuesMap, tt.expectedValues) {
+				t.Errorf("expected values map %v, got %v", tt.expectedValues, service.TemplateValuesMap)
 			}
 		})
 	}
@@ -465,7 +463,7 @@ func TestExecuteTemplates(t *testing.T) { //nolint:gocognit
 			err := service.ExecuteTemplates()
 
 			// Assert
-			if tt.expectError {
+			if tt.expectError { //nolint:nestif
 				if err == nil {
 					t.Errorf("expected an error but got none")
 				}
@@ -486,7 +484,7 @@ func TestExecuteTemplates(t *testing.T) { //nolint:gocognit
 		})
 	}
 }
-func TestRenameTargetTemplateFiles(t *testing.T) {
+func TestRenameTargetTemplateFiles(t *testing.T) { //nolint:gocognit
 	// Arrange
 	tests := []struct {
 		name          string
@@ -510,7 +508,7 @@ func TestRenameTargetTemplateFiles(t *testing.T) {
 		},
 		{
 			name: "File does not exist",
-			setupFs: func(fs afero.Fs) {
+			setupFs: func(_ afero.Fs) {
 				// No setup needed
 			},
 			targetFiles: map[string]*template.Template{

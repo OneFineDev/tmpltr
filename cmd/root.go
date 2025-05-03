@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -27,12 +24,11 @@ const (
 )
 
 var (
-	globalCfg                  *GlobalConfig = &GlobalConfig{}
-	cfgFile                    string
-	replaceHyphenWithCamelCase = true
+	globalCfg = &GlobalConfig{} //nolint:gochecknoglobals //will fix
+	cfgFile   string            //nolint:gochecknoglobals //will fix
 
 	// Preserves the flag/config override logic in bindFlags() even with nested config keys in config file.
-	flagToViperKeyLookup map[string]string = map[string]string{
+	flagToViperKeyLookup = map[string]string{ //nolint:gochecknoglobals //will fix
 		"log-level":          rootCfgKeyLoggingLevel,
 		"log-format":         rootCfgKeyLoggingFormat,
 		"log-output":         rootCfgKeyLoggingOutputs,
@@ -41,7 +37,7 @@ var (
 	}
 )
 
-var appLogger *slog.Logger
+var appLogger *slog.Logger //nolint:gochecknoglobals //will fix
 
 func NewRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -55,7 +51,7 @@ func NewRootCommand() *cobra.Command {
 	to an existing repository. You can also use tmpltr to capture a path as a local source, which can
 	then be committed to a remote.
 	`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// You can bind cobra and viper in a few locations, but PersistencePreRunE on the root command works well
 			err := initConfig(cmd)
 			appLogger = logger.InitLogger(globalCfg.Level, globalCfg.Format, os.Stdout)
@@ -63,8 +59,8 @@ func NewRootCommand() *cobra.Command {
 		},
 		// Uncomment the following line if your bare application
 		// has an action associated with it:
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.Usage()
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_ = cmd.Usage()
 			return nil
 		},
 	}
@@ -142,7 +138,7 @@ func initConfig(cmd *cobra.Command) error {
 			fmt.Fprintln(os.Stderr, "using config file:", viper.ConfigFileUsed())
 		}
 	} else {
-		return fmt.Errorf("config read error %s:", err.Error())
+		return fmt.Errorf("config read error %s: ", err.Error())
 	}
 
 	bindFlags(cmd, viper.GetViper())
@@ -155,10 +151,15 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) {
 		// Determine the naming convention of the flags when represented in the config file
 		configName := f.Name
 
-		if !f.Changed && viper.IsSet(flagToViperKeyLookup[configName]) {
-			val := viper.Get(flagToViperKeyLookup[configName])
-			if viper.GetBool(rootCfgKeyFlagDebug) {
-				fmt.Printf("flag %v default value %v is overridden by viper value %v\n", f.Name, f.DefValue, val)
+		if !f.Changed && v.IsSet(flagToViperKeyLookup[configName]) {
+			val := v.Get(flagToViperKeyLookup[configName])
+			if v.GetBool(rootCfgKeyFlagDebug) {
+				fmt.Printf( //nolint:forbidigo // It's fine
+					"flag %v default value %v is overridden by viper value %v\n",
+					f.Name,
+					f.DefValue,
+					val,
+				)
 			}
 			_ = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 		}

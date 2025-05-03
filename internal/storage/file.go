@@ -16,16 +16,12 @@ func NewFileClient() *FileClient {
 	return &FileClient{}
 }
 
-func (fc *FileClient) Clone(ctx context.Context) (billy.Filesystem, error) {
+func (fc *FileClient) Clone(_ context.Context) (billy.Filesystem, error) {
 	// TODO: Implement git storage source cloning/downloading
-	return nil, nil
-}
-func (fc *FileClient) CloneSource(ctx context.Context) (billy.Filesystem, error) {
-	// TODO: Implement git storage source cloning/downloading
-	return nil, nil
+	return nil, ErrNotImplemented
 }
 
-// SetCurrentSource sets the current source.
+// SetSource sets the current source.
 func (fc *FileClient) SetSource(s *types.Source) {
 	fc.CurrentSource = (*types.FileSource)(s)
 }

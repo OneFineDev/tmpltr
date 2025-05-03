@@ -122,7 +122,7 @@ func TestParseSourceSets(t *testing.T) {
 			sourceService.parseSourceSets()
 
 			// Assert
-			assert.Equal(t, len(tc.expectedSourceSets), len(sourceService.SourceSets),
+			assert.Equal(t, len(tc.expectedSourceSets), len(sourceService.SourceSets), //nolint:testifylint //no prob
 				"SourceSets should have the expected number of entries")
 
 			for alias, expectedSet := range tc.expectedSourceSets {
@@ -206,7 +206,7 @@ func TestParseSources(t *testing.T) { //nolint:gocognit
 				},
 				{
 					Alias:      "sharedTemplate",
-					SourceType: types.FileSourceType,
+					SourceType: types.BlobSourceType,
 					Path:       "/opt/shared/templates/common",
 				},
 			},
@@ -218,7 +218,7 @@ func TestParseSources(t *testing.T) { //nolint:gocognit
 				},
 				"sharedTemplate": {
 					Alias:      "sharedTemplate",
-					SourceType: types.FileSourceType,
+					SourceType: types.BlobSourceType,
 					Path:       "/opt/shared/templates/common",
 				},
 			},
@@ -278,7 +278,7 @@ func TestParseSources(t *testing.T) { //nolint:gocognit
 			// Assert
 			assert.NotNil(t, sourceService.TargetSources, "TargetSources map should be initialized")
 			assert.NotNil(t, sourceService.SourceMap, "SourceMap map should be initialized")
-			assert.Equal(t, len(tc.expectedSources), len(sourceService.SourceMap),
+			assert.Equal(t, len(tc.expectedSources), len(sourceService.SourceMap), //nolint:testifylint //no prob
 				"SourceMap should contain expected number of sources")
 
 			for alias, expectedSource := range tc.expectedSources {
@@ -302,12 +302,16 @@ func TestParseSources(t *testing.T) { //nolint:gocognit
 				// We don't actually create clients in the parseSources function, so they should be nil
 				gitSourcePresent := false
 				fileSourcePresent := false
+				blobSourcePresent := false
 
 				for _, source := range tc.sources {
-					if source.SourceType == types.GitSourceType {
+					switch source.SourceType {
+					case types.GitSourceType:
 						gitSourcePresent = true
-					} else if source.SourceType == types.FileSourceType {
+					case types.FileSourceType:
 						fileSourcePresent = true
+					case types.BlobSourceType:
+						blobSourcePresent = true
 					}
 				}
 
@@ -323,6 +327,13 @@ func TestParseSources(t *testing.T) { //nolint:gocognit
 					assert.True(t, exists, "SourceClients should have an entry for FileSourceType")
 					assert.Nil(t, sourceService.SourceClients[string(types.FileSourceType)],
 						"SourceClient for FileSourceType should be nil")
+				}
+
+				if blobSourcePresent {
+					_, exists := sourceService.SourceClients[string(types.BlobSourceType)]
+					assert.True(t, exists, "SourceClients should have an entry for BlobSourceType")
+					assert.Nil(t, sourceService.SourceClients[string(types.BlobSourceType)],
+						"SourceClient for BlobSourceType should be nil")
 				}
 			}
 		})
@@ -340,7 +351,7 @@ func TestParseSourceAuths(t *testing.T) {
 		{
 			name: "Basic source auths with environment variables",
 			sourceAuths: []types.SourceAuth{
-				{AuthAlias: "GITHUB", UserName: "github-user", SshKey: "/path/to/key.pem"},
+				{AuthAlias: "GITHUB", UserName: "github-user", SSHKey: "/path/to/key.pem"},
 				{AuthAlias: "GITLAB", UserName: "gitlab-user", Key: "some-key-value"},
 			},
 			environmentVars: map[string]string{
@@ -352,7 +363,7 @@ func TestParseSourceAuths(t *testing.T) {
 					AuthAlias: "GITHUB",
 					UserName:  "github-user",
 					Pat:       "github-token",
-					SshKey:    "/path/to/key.pem",
+					SSHKey:    "/path/to/key.pem",
 				},
 				"GITLAB": {AuthAlias: "GITLAB", UserName: "gitlab-user", Pat: "gitlab-token", Key: "some-key-value"},
 			},
@@ -390,7 +401,7 @@ func TestParseSourceAuths(t *testing.T) {
 		{
 			name: "Source auths with different fields populated",
 			sourceAuths: []types.SourceAuth{
-				{AuthAlias: "GITHUB", UserName: "github-user", SshKey: "/path/to/github.key"},
+				{AuthAlias: "GITHUB", UserName: "github-user", SSHKey: "/path/to/github.key"},
 				{AuthAlias: "GITLAB", UserName: "gitlab-user", Key: "gitlab-ssh-key"},
 				{AuthAlias: "BITBUCKET", UserName: "bb-user", Token: "bb-token"},
 				{AuthAlias: "EMPTY", UserName: "empty-user"},
@@ -405,7 +416,7 @@ func TestParseSourceAuths(t *testing.T) {
 					AuthAlias: "GITHUB",
 					UserName:  "github-user",
 					Pat:       "github-override-token",
-					SshKey:    "/path/to/github.key",
+					SSHKey:    "/path/to/github.key",
 				},
 				"GITLAB": {AuthAlias: "GITLAB", UserName: "gitlab-user", Key: "gitlab-ssh-key"},
 				"BITBUCKET": {
@@ -440,7 +451,7 @@ func TestParseSourceAuths(t *testing.T) {
 
 			// Set environment variables for the test
 			for key, value := range tc.environmentVars {
-				os.Setenv(key, value)
+				t.Setenv(key, value)
 				defer os.Unsetenv(key)
 			}
 
@@ -448,8 +459,12 @@ func TestParseSourceAuths(t *testing.T) {
 			sourceService.parseSourceAuths()
 
 			// Assert
-			assert.Equal(t, len(tc.expectedSourceAuths), len(sourceService.SourceAuthMap),
-				"SourceAuthMap should have the expected number of entries")
+			assert.Equal( //nolint:testifylint //no prob
+				t,
+				len(tc.expectedSourceAuths),
+				len(sourceService.SourceAuthMap),
+				"SourceAuthMap should have the expected number of entries",
+			)
 
 			for authAlias, expectedAuth := range tc.expectedSourceAuths {
 				actualAuth, exists := sourceService.SourceAuthMap[authAlias]
@@ -461,7 +476,7 @@ func TestParseSourceAuths(t *testing.T) {
 					"UserName should match for %s", authAlias)
 				assert.Equal(t, expectedAuth.Pat, actualAuth.Pat,
 					"Pat should match for %s", authAlias)
-				assert.Equal(t, expectedAuth.SshKey, actualAuth.SshKey,
+				assert.Equal(t, expectedAuth.SSHKey, actualAuth.SSHKey,
 					"SshKey should match for %s", authAlias)
 				assert.Equal(t, expectedAuth.Key, actualAuth.Key,
 					"Key should match for %s", authAlias)
