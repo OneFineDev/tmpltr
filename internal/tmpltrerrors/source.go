@@ -1,4 +1,4 @@
-package package_errors
+package tmpltrerrors
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
+const (
 	OpenSourceConfigFileError  = "error opening source config file: %w"
 	OpenValuesFileError        = "error opening values file: %w"
 	ParseSourceConfigFileError = "error parsing source config file: %w"

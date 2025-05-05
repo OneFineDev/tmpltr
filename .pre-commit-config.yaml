@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-merge-conflict
+        alias: ci
+      - id: check-yaml
+        alias: ci
+      - id: end-of-file-fixer
+        alias: ci
+      - id: check-added-large-files
+        args: ["--maxkb=1500"]
+        alias: ci
+      - id: detect-private-key
+        alias: ci
+      - id: trailing-whitespace
+        alias: ci
+
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        alias: ci
+      - id: golangci-lint
+        alias: ci
+      - id: go-unit-tests
+        alias: ci

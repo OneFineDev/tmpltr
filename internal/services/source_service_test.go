@@ -3,14 +3,13 @@
 package services_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/OneFineDev/tmpltr/internal/services"
 	"github.com/OneFineDev/tmpltr/internal/types"
-	"github.com/go-git/go-billy/v5"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseSourceConfigFile(t *testing.T) {
@@ -133,7 +132,7 @@ sources:
 					{
 						AuthAlias: "azureDevOpsSSH",
 						UserName:  "parisbrooker@parisbrooker.co.uk",
-						SshKey:    "/home/parisb/.ssh/ado",
+						SSHKey:    "/home/parisb/.ssh/ado",
 					},
 				},
 				SourceSets: []types.SourceSet{
@@ -239,10 +238,10 @@ sources:
 			fs := afero.NewMemMapFs()
 			testFilePath := ".sources.yaml"
 			err := afero.WriteFile(fs, testFilePath, []byte(tt.fileContent), 0644)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			f, err := fs.Open(testFilePath)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			// Act
 			result, err := services.ParseSourceConfigFile(f)
@@ -252,125 +251,12 @@ sources:
 
 			// Assert
 			if tt.expectError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, result)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tt.expectedConfig, result)
 			}
 		})
 	}
 }
-
-// func TestCloneSources(t *testing.T) {
-// 	// Arrange
-// 	tests := []struct {
-// 		name           string
-// 		targetSources  map[string]types.Source
-// 		expectedErrors []error
-// 	}{
-// 		{
-// 			name: "Successful clone for all sources",
-// 			targetSources: map[string]types.Source{
-// 				"source1": {
-// 					Alias:      "source1",
-// 					SourceType: types.GitSourceType,
-// 					URL:        "some/git/path",
-// 					Path:       "/",
-// 					Client: &mockSourceClient{
-// 						cloneFunc: func(ctx context.Context) (billy.Filesystem, error) {
-// 							fs := memfs.New()
-// 							fs.Create("source1")
-// 							return fs, nil
-// 						},
-// 					},
-// 				},
-// 				"source2": {
-// 					Alias:      "source2",
-// 					SourceType: types.GitSourceType,
-// 					URL:        "some/git/path",
-// 					Path:       "/",
-// 					Client: &mockSourceClient{
-// 						cloneFunc: func(ctx context.Context) (billy.Filesystem, error) {
-// 							fs := memfs.New()
-// 							fs.Create("source2")
-// 							return fs, nil
-// 						},
-// 					},
-// 				},
-// 			},
-// 			expectedErrors: nil,
-// 		},
-// 		{
-// 			name: "Error during clone for one source",
-// 			targetSources: map[string]types.Source{
-// 				"source1": {
-// 					Alias: "source1",
-// 					Client: &mockSourceClient{
-// 						cloneFunc: func(ctx context.Context) (billy.Filesystem, error) {
-// 							return memfs.New(), nil
-// 						},
-// 					},
-// 				},
-// 				"source2": {
-// 					Alias: "source2",
-// 					Client: &mockSourceClient{
-// 						cloneFunc: func(ctx context.Context) (billy.Filesystem, error) {
-// 							return nil, fmt.Errorf("inmem clone failed for source2")
-// 						},
-// 					},
-// 				},
-// 			},
-// 			expectedErrors: []error{fmt.Errorf("inmem clone failed for source2")},
-// 		},
-// 	}
-
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			// Arrange
-// 			ss := &services.SourceService{
-// 				TargetSources: tt.targetSources,
-// 				Logger:        slog.New(slog.DiscardHandler),
-// 			}
-// 			ctx := context.Background()
-
-// 			// Act
-// 			billyChan, errChan := ss.CloneSources(ctx)
-
-// 			var receivedErrors []error
-// 			var receivedFilesystems []billy.Filesystem
-
-// 			for b := range billyChan {
-// 				receivedFilesystems = append(receivedFilesystems, b)
-// 			}
-// 			for e := range errChan {
-// 				receivedErrors = append(receivedErrors, e)
-// 			}
-// 			// Assert
-// 			if len(tt.expectedErrors) > 0 {
-// 				assert.Len(t, receivedErrors, len(tt.expectedErrors))
-// 				for i, expectedErr := range tt.expectedErrors {
-// 					assert.EqualError(t, receivedErrors[i], expectedErr.Error())
-// 				}
-// 			} else {
-// 				assert.Empty(t, receivedErrors)
-// 			}
-// 			assert.Len(t, receivedFilesystems, len(tt.targetSources)-len(tt.expectedErrors))
-// 		})
-// 	}
-// }
-
-// mockSourceClient is a mock implementation of the SourceClient interface.
-type mockSourceClient struct {
-	cloneFunc func(ctx context.Context) (billy.Filesystem, error)
-}
-
-func (m *mockSourceClient) Clone(ctx context.Context) (billy.Filesystem, error) {
-	return m.cloneFunc(ctx)
-}
-
-func (m *mockSourceClient) GetCurrentSource() *types.Source {
-	return nil
-}
-
-func (m *mockSourceClient) SetCurrentSource(s *types.Source) {}

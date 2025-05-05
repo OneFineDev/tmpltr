@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/charmbracelet/huh v0.7.0
+	github.com/cucumber/godog v0.15.0
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/pkg/errors v0.9.1
@@ -33,7 +34,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cucumber/gherkin/go/v26 v26.2.0 // indirect
-	github.com/cucumber/godog v0.15.0 // indirect
 	github.com/cucumber/messages/go/v21 v21.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

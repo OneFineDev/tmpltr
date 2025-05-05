@@ -16,7 +16,7 @@ type SafeFs struct {
 	Fs afero.Fs
 }
 
-// copyFileSystem recursively walks a directory and copies its contents.
+// CopyFileSystemSafe recursively walks a directory and copies its contents.
 func (sf *SafeFs) CopyFileSystemSafe(fs billy.Filesystem, root string, dest string) error {
 	sf.mu.Lock()
 	defer sf.mu.Unlock()

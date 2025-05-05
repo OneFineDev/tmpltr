@@ -121,7 +121,7 @@ Node:
 					errors = append(errors, fmt.Errorf("node %v not supported", n))
 					continue Node
 				}
-				if a, ok := c.Args[0].(*parse.FieldNode); ok {
+				if a, fieldOk := c.Args[0].(*parse.FieldNode); fieldOk {
 					// flat node
 					if len(a.Ident) == 1 {
 						valuesMap[a.Ident[0]] = ""
@@ -129,7 +129,7 @@ Node:
 					// 1 level node
 					//
 					if len(a.Ident) == 2 { //nolint:mnd
-						if nestedMap, ok := valuesMap[a.Ident[0]].(map[string]any); ok {
+						if nestedMap, identOk := valuesMap[a.Ident[0]].(map[string]any); identOk {
 							nestedMap[a.Ident[1]] = ""
 						} else {
 							newNestedMap := make(map[string]any)
@@ -139,8 +139,8 @@ Node:
 					}
 					// 2 level node
 					if len(a.Ident) == 3 { //nolint:mnd
-						if nestedMap, ok := valuesMap[a.Ident[0]].(map[string]any); ok {
-							if innerMap, ok := nestedMap[a.Ident[1]].(map[string]any); ok {
+						if nestedMap, l2IdentOk := valuesMap[a.Ident[0]].(map[string]any); l2IdentOk {
+							if innerMap, innerOk := nestedMap[a.Ident[1]].(map[string]any); innerOk {
 								innerMap[a.Ident[2]] = ""
 							} else {
 								newInnerMap := make(map[string]any)
@@ -199,14 +199,12 @@ func (ts *TemplateService) CreateTemplateValuesMap() {
 }
 
 func (ts *TemplateService) InteractiveInput() error {
-	form, valuesPopulated := ui.RenderForm(ts.TemplateValuesMap)
+	form, _ := ui.RenderForm(ts.TemplateValuesMap)
 
 	err := form.Run()
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(valuesPopulated)
 	return nil
 }
 
@@ -217,15 +215,15 @@ func (ts *TemplateService) ValidateTemplateValues( //nolint:gocognit // complexi
 	missingKeys := []string{}
 	// check there are no keys in valuesMap that are not in unknown
 	for key, value := range valuesMap {
-		if nestedMap, ok := value.(map[string]any); ok { //nolint:nestif // complexity not avoidable
+		if nestedMap, okNested := value.(map[string]any); okNested { //nolint:nestif // complexity not avoidable
 			// Check nested map keys
-			if unknownNestedMap, ok := unknown[key].(map[string]any); ok {
+			if unknownNestedMap, okUnknownNested := unknown[key].(map[string]any); okUnknownNested {
 				for nestedKey, nestedValue := range nestedMap {
-					if innerMap, ok := nestedValue.(map[string]any); ok {
+					if innerMap, okInner := nestedValue.(map[string]any); okInner {
 						// Check inner map keys
-						if unknownInnerMap, ok := unknownNestedMap[nestedKey].(map[string]any); ok {
+						if unknownInnerMap, okUnknownInner := unknownNestedMap[nestedKey].(map[string]any); okUnknownInner {
 							for innerKey := range innerMap {
-								if _, ok := unknownInnerMap[innerKey]; !ok {
+								if _, okInnerKey := unknownInnerMap[innerKey]; !okInnerKey {
 									missingKeys = append(missingKeys, fmt.Sprintf("%s.%s.%s", key, nestedKey, innerKey))
 								}
 							}
@@ -233,7 +231,7 @@ func (ts *TemplateService) ValidateTemplateValues( //nolint:gocognit // complexi
 							missingKeys = append(missingKeys, fmt.Sprintf("%s.%s", key, nestedKey))
 						}
 					} else {
-						if _, ok := unknownNestedMap[nestedKey]; !ok {
+						if _, okNestedKey := unknownNestedMap[nestedKey]; !okNestedKey {
 							missingKeys = append(missingKeys, fmt.Sprintf("%s.%s", key, nestedKey))
 						}
 					}
@@ -243,7 +241,7 @@ func (ts *TemplateService) ValidateTemplateValues( //nolint:gocognit // complexi
 			}
 		} else {
 			// Check top-level keys
-			if _, ok := unknown[key]; !ok {
+			if _, okTopLevel := unknown[key]; !okTopLevel {
 				missingKeys = append(missingKeys, key)
 			}
 		}
@@ -254,7 +252,7 @@ func (ts *TemplateService) ValidateTemplateValues( //nolint:gocognit // complexi
 
 // RenameTargetTemplateFiles renames the target files by removing the .template suffix.
 func (ts *TemplateService) RenameTargetTemplateFiles() error {
-	for k, _ := range ts.TargetFileToTemplateMap {
+	for k := range ts.TargetFileToTemplateMap {
 		name := strings.TrimSuffix(k, ".template")
 		err := ts.CurrentFS.Fs.Rename(k, name)
 		if err != nil {

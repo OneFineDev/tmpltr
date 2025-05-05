@@ -3,8 +3,5 @@ Feature: get values
 
 Scenario Outline: getting the values for a SourceSet
     Given a valid SourceSet in the source.yaml file
-    When a user runs tmpltr get values --sourceSet "<sourceSet>" 
+    When a user runs tmpltr get values --sourceSet "<sourceSet>"
     Then the desired values should be printed to the console
-
-
-

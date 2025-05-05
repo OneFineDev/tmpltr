@@ -180,15 +180,15 @@ sources:
 				require.NoError(t, err, "Did not expect an error but got: %v", err)
 
 				// Verify source auth count
-				assert.Equal(t, tt.expectedValues.sourceAuthCount, len(result.SourceAuths),
+				assert.Equal(t, tt.expectedValues.sourceAuthCount, len(result.SourceAuths), //nolint:testifylint //no prob
 					"Expected %d source auths, but got %d", tt.expectedValues.sourceAuthCount, len(result.SourceAuths))
 
 				// Verify source set count
-				assert.Equal(t, tt.expectedValues.sourceSetCount, len(result.SourceSets),
+				assert.Equal(t, tt.expectedValues.sourceSetCount, len(result.SourceSets), //nolint:testifylint //no prob
 					"Expected %d source sets, but got %d", tt.expectedValues.sourceSetCount, len(result.SourceSets))
 
 				// Verify source count
-				assert.Equal(t, tt.expectedValues.sourceCount, len(result.Sources),
+				assert.Equal(t, tt.expectedValues.sourceCount, len(result.Sources), //nolint:testifylint //no prob
 					"Expected %d sources, but got %d", tt.expectedValues.sourceCount, len(result.Sources))
 
 				// Verify specific source sets contents

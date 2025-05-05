@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -24,7 +25,7 @@ func ReadYamlFromFile[T YamlStruct](r io.Reader) (T, error) {
 
 	// Check if there is any content
 	if len(data) == 0 {
-		return yamlStruct, fmt.Errorf("no content in file, data length is 0")
+		return yamlStruct, errors.New("no content in file, data length is 0")
 	}
 
 	// Debug output - can be removed if not needed

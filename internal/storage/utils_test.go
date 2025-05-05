@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSafeFs_CopyFileSystemSafe(t *testing.T) {
@@ -34,7 +35,7 @@ func TestSafeFs_CopyFileSystemSafe(t *testing.T) {
 				file.Write([]byte("content"))
 				return fs
 			},
-			setupDestFs: func() afero.Fs {
+			setupDestFs: func() afero.Fs { //nolint:gocritic // For sig consistency
 				return afero.NewMemMapFs()
 			},
 			root:          "/src",
@@ -42,24 +43,24 @@ func TestSafeFs_CopyFileSystemSafe(t *testing.T) {
 			expectedError: nil,
 			verify: func(t *testing.T, destFs afero.Fs) {
 				_, err := destFs.Stat("/dest/src/dir")
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				content, err := afero.ReadFile(destFs, "/dest/src/dir/file.txt")
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, "content", string(content))
 			},
 		},
 		{
 			name: "returns error when source directory does not exist",
-			setupSourceFs: func() billy.Filesystem {
+			setupSourceFs: func() billy.Filesystem { //nolint:gocritic // For sig consistency
 				return memfs.New()
 			},
-			setupDestFs: func() afero.Fs {
+			setupDestFs: func() afero.Fs { //nolint:gocritic // For sig consistency
 				return afero.NewMemMapFs()
 			},
 			root:          "/nonexistent",
 			dest:          "/dest",
 			expectedError: errors.New("file does not exist"),
-			verify:        func(t *testing.T, destFs afero.Fs) {},
+			verify:        func(*testing.T, afero.Fs) {},
 		},
 	}
 
@@ -75,10 +76,10 @@ func TestSafeFs_CopyFileSystemSafe(t *testing.T) {
 
 			// Assert
 			if tt.expectedError != nil {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError.Error())
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			tt.verify(t, destFs)
 		})
