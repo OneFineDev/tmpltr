@@ -88,6 +88,7 @@ func NewRootCommand() *cobra.Command {
 		NewGetCommand(),
 		NewCreateCommand(),
 		NewProjectCommand(),
+		NewVersionCommand(),
 	)
 
 	return rootCmd
