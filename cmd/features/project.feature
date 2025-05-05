@@ -9,9 +9,3 @@ Scenario Outline: using SourceSets (defined in a local .sources.yaml) using diff
     Examples:
         | sourceSet          | authType | flagString | valuesFile  |
         | terraformChildSet  | ssh      | --token    | values.yaml |
-
-
-Scenario Outline: title
-    Given context
-    When event
-    Then outcome

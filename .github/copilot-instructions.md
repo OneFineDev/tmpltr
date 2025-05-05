@@ -11,12 +11,16 @@ When testing unexported methods or functions, these tests should be created in a
 
 Wherever the tested method or function uses the afero package, always use a memmap fs as the filesystem in tests (i.e. don't write to disk where this can be avoided.).
 
-When writing assertions in tests, do not abstract assertion/verification logic into functions stores in test cases, explicitly define the assertion or verification logic in the "Assert" portion of the test; use conditional logic if needed here. Use testify require (not testify assert) when checking for the presence or absence of errors.
+When writing assertions in tests, do not abstract assertion/verification logic into functions stores in test cases, explicitly define the assertion or verification logic in the "Assert" portion of the test; use conditional logic if needed here. Use testify require (not testify assert) when checking for the presence or absence of errors. Use assert.Len when asserting the length of objects.
 
 When creating a test file, the package name should always be the package name with "\_test" appended.
 
-When creating or satisfying a slog logger on services, always use the DiscardHandler
+When creating or satisfying a slog logger on services, always use the DiscardHandler.
 
 <!-- Style -->
 
 Any comments you include above functions or types should end with a period.
+
+<!-- Code Quality -->
+
+When generating go code, avoid variable name shadowing.
