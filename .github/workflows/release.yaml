@@ -33,7 +33,7 @@ jobs:
       - name: github-action-svu
         uses: charlesthomas/github-action-svu@v1.1.2+3.2.3
         with:
-          push: true
+          pushTag: true
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
